@@ -2,7 +2,7 @@
 name = "llm_affector"
 version = "0.1.0"
 edition = "2021"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["Matthew Busel"]
 description = "Async Rust library for LLM-based content analysis"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/Mattbusel/llm_affector"
