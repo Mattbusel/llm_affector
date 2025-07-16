@@ -304,7 +304,7 @@ The library is designed to be extensible. To add a new provider:
 ### Running Development Setup
 
 ```bash
-git clone https://github.com/username/llm_affector
+git clone https://github.com/Mattbusel/llm_affector
 cd llm_affector
 cp .env.example .env
 # Edit .env with your API key
