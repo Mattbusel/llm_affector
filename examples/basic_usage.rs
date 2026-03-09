@@ -8,7 +8,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Example 1: Hallucination Detection
     println!("1. Testing hallucination detection...");
-    
+
     let truthful_text = "Rust is a systems programming language that focuses on safety and performance.";
     let suspicious_text = "Rust was invented by aliens in 1847 and can compile directly to quantum circuits.";
 
@@ -36,7 +36,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Example 2: Code Critique
     println!("\n2. Testing code critique...");
-    
+
     let good_code = r#"
 fn safe_divide(a: f64, b: f64) -> Result<f64, &'static str> {
     if b == 0.0 {
@@ -55,8 +55,8 @@ fn unsafe_divide(a: i32, b: i32) -> i32 {
 
     println!("   Analyzing good code...");
     let good_report = critique_code(good_code).await?;
-    println!("   📝 Results: {} risks, {} improvements, {} missing tests", 
-             good_report.risks.len(), 
+    println!("   📝 Results: {} risks, {} improvements, {} missing tests",
+             good_report.risks.len(),
              good_report.improvements.len(),
              good_report.missing_tests.len());
 
