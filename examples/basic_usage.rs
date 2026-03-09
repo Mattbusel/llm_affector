@@ -1,6 +1,6 @@
-﻿//! Basic usage example showing individual function calls
+//! Basic usage example showing individual function calls
 
-use llm_affector::{detect_hallucination, critique_code, Verdict};
+use llm_affector::{critique_code, detect_hallucination, Verdict};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -9,8 +9,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Example 1: Hallucination Detection
     println!("1. Testing hallucination detection...");
 
-    let truthful_text = "Rust is a systems programming language that focuses on safety and performance.";
-    let suspicious_text = "Rust was invented by aliens in 1847 and can compile directly to quantum circuits.";
+    let truthful_text =
+        "Rust is a systems programming language that focuses on safety and performance.";
+    let suspicious_text =
+        "Rust was invented by aliens in 1847 and can compile directly to quantum circuits.";
 
     println!("   Analyzing truthful text...");
     match detect_hallucination(truthful_text).await? {
@@ -55,10 +57,12 @@ fn unsafe_divide(a: i32, b: i32) -> i32 {
 
     println!("   Analyzing good code...");
     let good_report = critique_code(good_code).await?;
-    println!("   📝 Results: {} risks, {} improvements, {} missing tests",
-             good_report.risks.len(),
-             good_report.improvements.len(),
-             good_report.missing_tests.len());
+    println!(
+        "   📝 Results: {} risks, {} improvements, {} missing tests",
+        good_report.risks.len(),
+        good_report.improvements.len(),
+        good_report.missing_tests.len()
+    );
 
     println!("   Analyzing risky code...");
     let risky_report = critique_code(risky_code).await?;

@@ -1,20 +1,20 @@
-﻿//! # llm_affector
-//! 
+//! # llm_affector
+//!
 //! An async Rust library for LLM-based content analysis, providing hallucination
 //! detection and code critique functionality.
-//! 
+//!
 //! ## Features
-//! 
+//!
 //! - **Hallucination Detection**: Analyze text for factual errors and unsupported claims
 //! - **Code Critique**: Review Rust code for bugs, style issues, and missing tests
 //! - **Async/Await Support**: Built on Tokio for high-performance concurrent operations
 //! - **Multiple LLM Providers**: Currently supports OpenAI, easily extensible
-//! 
+//!
 //! ## Quick Start
-//! 
+//!
 //! ```rust,no_run
 //! use llm_affector::{detect_hallucination, critique_code, Verdict};
-//! 
+//!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     // Set your API key in environment: LLM_API_KEY=your_key_here
@@ -39,7 +39,7 @@
 //!     }
 //!     
 //!     let report = critique_result?;
-//!     println!("📝 Code critique: {} risks, {} improvements suggested", 
+//!     println!("📝 Code critique: {} risks, {} improvements suggested",
 //!              report.risks.len(), report.improvements.len());
 //!     
 //!     Ok(())
@@ -47,17 +47,17 @@
 //! ```
 
 mod client;
-mod types;
+mod critique;
 mod errors;
 mod hallucination;
-mod critique;
+mod types;
 
 // Re-export public API
 pub use client::LlmClient;
-pub use types::{Verdict, Issue, CritiqueReport};
+pub use critique::critique_code;
 pub use errors::LlmAffectorError;
 pub use hallucination::detect_hallucination;
-pub use critique::critique_code;
+pub use types::{CritiqueReport, Issue, Verdict};
 
 // Type alias for convenience
 pub type Result<T> = std::result::Result<T, LlmAffectorError>;

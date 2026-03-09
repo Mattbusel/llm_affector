@@ -1,5 +1,5 @@
 use crate::errors::LlmAffectorError;
-use crate::types::{OpenAIRequest, OpenAIResponse, OpenAIMessage};
+use crate::types::{OpenAIMessage, OpenAIRequest, OpenAIResponse};
 use reqwest::Client;
 use std::env;
 
@@ -15,10 +15,9 @@ impl LlmClient {
     pub fn new() -> Result<Self, LlmAffectorError> {
         // Load .env file if it exists
         dotenv::dotenv().ok();
-        
-        let api_key = env::var("LLM_API_KEY")
-            .map_err(|_| LlmAffectorError::ApiKeyNotFound)?;
-        
+
+        let api_key = env::var("LLM_API_KEY").map_err(|_| LlmAffectorError::ApiKeyNotFound)?;
+
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(30))
             .build()?;
@@ -53,12 +52,15 @@ impl LlmClient {
 
         if !response.status().is_success() {
             let status = response.status().as_u16();
-            let body = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            let body = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(LlmAffectorError::ApiError { status, body });
         }
 
         let api_response: OpenAIResponse = response.json().await?;
-        
+
         api_response
             .choices
             .first()

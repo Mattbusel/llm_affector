@@ -3,19 +3,19 @@ use crate::errors::LlmAffectorError;
 use crate::types::CritiqueReport;
 
 /// Critique Rust code for potential issues
-/// 
+///
 /// Takes a Rust source code snippet and uses an LLM to analyze it for
 /// potential bugs, edge cases, style violations, and missing tests.
-/// 
+///
 /// # Arguments
 /// * `code` - The Rust source code to analyze
-/// 
+///
 /// # Returns
 /// * `Ok(CritiqueReport)` containing analysis results
 /// * `Err(LlmAffectorError)` if the analysis fails
 pub async fn critique_code(code: &str) -> Result<CritiqueReport, LlmAffectorError> {
     let client = LlmClient::new()?;
-    
+
     let prompt = build_critique_prompt(code);
     let response_text = client.send_prompt(&prompt).await?;
     parse_critique_response(&response_text)
@@ -38,11 +38,7 @@ fn parse_critique_response(response: &str) -> Result<CritiqueReport, LlmAffector
             .unwrap_or(response)
             .trim()
     } else if response.contains("```") {
-        response
-            .split("```")
-            .nth(1)
-            .unwrap_or(response)
-            .trim()
+        response.split("```").nth(1).unwrap_or(response).trim()
     } else {
         response.trim()
     };
