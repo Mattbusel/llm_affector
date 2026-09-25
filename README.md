@@ -13,16 +13,59 @@ The idea is an "LLM as judge" step you can drop into a pipeline: generate an ans
 - Tolerates model replies wrapped in Markdown code fences before parsing the JSON.
 - Typed errors (`LlmAffectorError`): missing API key, HTTP failure, non-2xx API status with body, unparseable response.
 - `LlmClient::send_prompt` is public if you want to send your own judge prompts.
+- Works with any OpenAI-compatible endpoint (`LLM_BASE_URL`, `LLM_MODEL`).
+- Ships as a command-line tool too: `llm_affector check "some claim"` or `llm_affector critique src/main.rs`.
+
+## Install
+
+### Download the command-line tool (no Rust needed)
+
+Grab the file for your system from the [latest release](https://github.com/Mattbusel/llm_affector/releases/latest):
+
+| System | File |
+|--------|------|
+| Windows | `llm_affector-vX.Y.Z-x86_64-pc-windows-msvc.zip` |
+| macOS (Apple Silicon) | `llm_affector-vX.Y.Z-aarch64-apple-darwin.tar.gz` |
+| macOS (Intel) | `llm_affector-vX.Y.Z-x86_64-apple-darwin.tar.gz` |
+| Linux (x86_64) | `llm_affector-vX.Y.Z-x86_64-unknown-linux-gnu.tar.gz` |
+
+Unzip it, set your key, and run it from a terminal:
+
+```bash
+export LLM_API_KEY=sk-...        # Windows PowerShell: $env:LLM_API_KEY="sk-..."
+llm_affector check "The Eiffel Tower was finished in 1999."
+llm_affector critique src/main.rs
+llm_affector --help
+```
+
+`check` exits with 1 when it finds problem claims, so it can gate a script. Add `--json` for machine-readable output. `SHA256SUMS.txt` in the release lets you verify the download.
+
+The binaries are not code-signed. Windows SmartScreen may say "unknown publisher": click **More info**, then **Run anyway**. On macOS, if it is blocked, right-click the file and choose **Open** (or run `xattr -d com.apple.quarantine llm_affector`).
+
+### With Cargo
+
+```bash
+cargo install llm_affector      # the CLI
+cargo add llm_affector          # the library, in your own project
+```
+
+### From source
+
+```bash
+git clone https://github.com/Mattbusel/llm_affector
+cd llm_affector
+cargo run --release -- check "some claim"
+```
 
 ## Quick start
 
 ```toml
 [dependencies]
-llm_affector = { git = "https://github.com/Mattbusel/llm_affector" }
+llm_affector = "0.2"
 tokio = { version = "1", features = ["full"] }
 ```
 
-The crate is not on crates.io. Set an OpenAI API key in the environment or in a `.env` file (loaded automatically):
+Set an OpenAI API key in the environment or in a `.env` file (loaded automatically):
 
 ```bash
 export LLM_API_KEY=sk-...
@@ -60,8 +103,8 @@ Try it from a clone:
 git clone https://github.com/Mattbusel/llm_affector
 cd llm_affector
 cp .env.example .env   # then put your key in LLM_API_KEY
-cargo run                          # demo binary (src/main.rs)
-cargo run --example basic_usage    # more examples
+cargo run -- check "some claim"    # the CLI (src/main.rs)
+cargo run --example basic_usage    # library examples
 ```
 
 ## Handling errors
@@ -86,16 +129,17 @@ async fn check(text: &str) {
 |---|---|
 | `src/hallucination.rs` | fact-checker prompt, JSON parsing into `Verdict` |
 | `src/critique.rs` | Rust reviewer prompt, JSON parsing into `CritiqueReport` |
-| `src/client.rs` | `LlmClient`: reqwest call to OpenAI Chat Completions (`gpt-4`, temperature 0.1, 30 s timeout) |
+| `src/client.rs` | `LlmClient`: reqwest call to an OpenAI-compatible Chat Completions endpoint (default `gpt-4o-mini`, temperature 0.1, 30 s timeout; all configurable) |
 | `src/types.rs` | `Verdict`, `Issue`, `CritiqueReport` and the OpenAI wire types |
 | `src/errors.rs` | `LlmAffectorError` |
-| `src/main.rs`, `examples/basic_usage.rs` | runnable demos |
+| `src/main.rs` | the `llm_affector` command-line tool |
+| `examples/basic_usage.rs` | runnable library demo |
 
 ## Status and limitations
 
-Early prototype (0.1.0).
+Early prototype (0.2.0).
 
-- OpenAI only, and the model (`gpt-4`), endpoint and timeout are hard-coded. `.env.example` lists `LLM_BASE_URL`, `LLM_MODEL` and `LLM_TIMEOUT_SECONDS`, but the code does not read them yet; only `LLM_API_KEY` is used.
+- Speaks the OpenAI Chat Completions format only. Configure it with `LLM_API_KEY` (required), `LLM_BASE_URL`, `LLM_MODEL` (default `gpt-4o-mini`) and `LLM_TIMEOUT_SECONDS` (default 30), from the environment or a `.env` file.
 - Each call creates a new HTTP client.
 - The hallucination check relies only on the judge model's own knowledge; there is no retrieval or source grounding, so treat a `Pass` as "the judge found nothing", not as verified.
 - `tests/` and the `concurrent_analysis` / `error_handling` examples are placeholders with no content yet.
