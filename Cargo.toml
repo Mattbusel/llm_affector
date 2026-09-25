@@ -1,14 +1,16 @@
 [package]
 name = "llm_affector"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Matthew Busel"]
-description = "Async Rust library for LLM-based content analysis"
-license = "MIT OR Apache-2.0"
+description = "Async Rust library and CLI that uses a second LLM call to flag hallucinations and critique code"
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/Mattbusel/llm_affector"
 repository = "https://github.com/Mattbusel/llm_affector"
 documentation = "https://docs.rs/llm_affector"
 keywords = ["llm", "async", "tokio", "openai", "analysis"]
-categories = ["api-bindings", "text-processing"]
+categories = ["api-bindings", "text-processing", "command-line-utilities"]
 
 [dependencies]
 tokio = { version = "1.0", features = ["full"] }
@@ -17,7 +19,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "1.0"
 anyhow = "1.0"
-dotenv = "0.15"  # Add this line
+dotenv = "0.15"
 
 [dev-dependencies]
 tokio-test = "0.4"
