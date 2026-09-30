@@ -18,7 +18,7 @@ The idea is an "LLM as judge" step you can drop into a pipeline: generate an ans
 
 ### Download the command-line tool (no Rust needed)
 
-Grab the file for your system from the [latest release](https://github.com/Mattbusel/llm_affector/releases/latest):
+Grab the file for your system from the [latest release](https://gitlab.com/mattbusel/llm_affector/-/releases):
 
 | System | File |
 |--------|------|
@@ -50,7 +50,7 @@ cargo add llm_affector          # the library, in your own project
 ### From source
 
 ```bash
-git clone https://github.com/Mattbusel/llm_affector
+git clone https://gitlab.com/mattbusel/llm_affector
 cd llm_affector
 cargo run --release -- check "some claim"
 ```
@@ -98,7 +98,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 Try it from a clone:
 
 ```bash
-git clone https://github.com/Mattbusel/llm_affector
+git clone https://gitlab.com/mattbusel/llm_affector
 cd llm_affector
 cp .env.example .env   # then put your key in LLM_API_KEY
 cargo run -- check "some claim"    # the CLI (src/main.rs)
