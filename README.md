@@ -1,7 +1,5 @@
 # llm_affector
 
-[![CI](https://github.com/Mattbusel/llm_affector/actions/workflows/ci.yml/badge.svg)](https://github.com/Mattbusel/llm_affector/actions/workflows/ci.yml)
-
 A small async Rust library that uses a second LLM call to check the first: `detect_hallucination` flags unsupported or false claims in a piece of text, and `critique_code` reviews a Rust snippet for risks, improvements and missing tests. Both return typed results.
 
 The idea is an "LLM as judge" step you can drop into a pipeline: generate an answer, then ask a model to audit it and get back structured JSON (`Verdict::Pass` / `Verdict::Fail(issues)`, or a `CritiqueReport`) instead of free text. The two checks are independent async functions, so you can run them concurrently with `tokio::join!`.
