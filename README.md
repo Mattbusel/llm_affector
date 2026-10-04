@@ -1,79 +1,53 @@
 # llm_affector
 
-A small async Rust library that uses a second LLM call to check the first: `detect_hallucination` flags unsupported or false claims in a piece of text, and `critique_code` reviews a Rust snippet for risks, improvements and missing tests. Both return typed results.
+Ask a second LLM to audit the first: a Rust library and command-line tool for anyone who wants an automatic "LLM as judge" check on generated text or code.
 
-The idea is an "LLM as judge" step you can drop into a pipeline: generate an answer, then ask a model to audit it and get back structured JSON (`Verdict::Pass` / `Verdict::Fail(issues)`, or a `CritiqueReport`) instead of free text. The two checks are independent async functions, so you can run them concurrently with `tokio::join!`.
-
-## Features
-
-- **`detect_hallucination(text)`** returns `Verdict::Pass` or `Verdict::Fail(Vec<Issue>)`, where each `Issue` has the problematic `claim` and an `explanation`.
-- **`critique_code(code)`** returns a `CritiqueReport { risks, improvements, missing_tests }`.
-- Tolerates model replies wrapped in Markdown code fences before parsing the JSON.
-- Typed errors (`LlmAffectorError`): missing API key, HTTP failure, non-2xx API status with body, unparseable response.
-- `LlmClient::send_prompt` is public if you want to send your own judge prompts.
-- Works with any OpenAI-compatible endpoint (`LLM_BASE_URL`, `LLM_MODEL`).
-- Ships as a command-line tool too: `llm_affector check "some claim"` or `llm_affector critique src/main.rs`.
+`detect_hallucination` flags unsupported or false claims in a piece of text, `check_against_sources` flags claims your documents do not support (for retrieval-augmented answers), and `critique_code` reviews a Rust snippet for risks, improvements and missing tests. Both return typed results (`Verdict::Pass` / `Verdict::Fail(issues)`, or a `CritiqueReport`) instead of free text. It works with OpenAI and with any server that speaks the OpenAI Chat Completions format: a local Ollama, OpenRouter, Gemini, vLLM, LM Studio or a company proxy.
 
 ## Install
 
-### Download the command-line tool (no Rust needed)
+```bash
+cargo install llm_affector      # the command-line tool
+cargo add llm_affector          # the library, in your own project
+```
 
-Grab the file for your system from the [latest release](https://gitlab.com/mattbusel/llm_affector/-/releases):
-
-| System | File |
-|--------|------|
-| Windows | `llm_affector-vX.Y.Z-x86_64-pc-windows-msvc.zip` |
-| macOS (Apple Silicon) | `llm_affector-vX.Y.Z-aarch64-apple-darwin.tar.gz` |
-| macOS (Intel) | `llm_affector-vX.Y.Z-x86_64-apple-darwin.tar.gz` |
-| Linux (x86_64) | `llm_affector-vX.Y.Z-x86_64-unknown-linux-gnu.tar.gz` |
-
-Unzip it, set your key, and run it from a terminal:
+## Quick start (command line)
 
 ```bash
 export LLM_API_KEY=sk-...        # Windows PowerShell: $env:LLM_API_KEY="sk-..."
 llm_affector check "The Eiffel Tower was finished in 1999."
 llm_affector critique src/main.rs
-llm_affector --help
+llm_affector check --json - < answer.txt
 ```
 
-`check` exits with 1 when it finds problem claims, so it can gate a script. Add `--json` for machine-readable output. `SHA256SUMS.txt` in the release lets you verify the download.
-
-The binaries are not code-signed. Windows SmartScreen may say "unknown publisher": click **More info**, then **Run anyway**. On macOS, if it is blocked, right-click the file and choose **Open** (or run `xattr -d com.apple.quarantine llm_affector`).
-
-### With Cargo
+`check` exits with 1 when it finds problem claims and 2 on errors, so it can gate a script or a CI job. Add `--json` for machine-readable output, and `--source FILE` (repeatable) to check the text only against those documents:
 
 ```bash
-cargo install llm_affector      # the CLI
-cargo add llm_affector          # the library, in your own project
+llm_affector check --source docs/eiffel.txt "The Eiffel Tower opened in 1999."
 ```
 
-### From source
+No API key? Run a local model with [Ollama](https://ollama.com) and point the tool at it:
 
 ```bash
-git clone https://gitlab.com/mattbusel/llm_affector
-cd llm_affector
-cargo run --release -- check "some claim"
+ollama pull qwen2.5:7b
+export LLM_BASE_URL=http://localhost:11434/v1 LLM_MODEL=qwen2.5:7b
+llm_affector check "The Moon is 3 km from Earth."
 ```
 
-## Quick start
+## Quick start (library)
 
 ```toml
 [dependencies]
-llm_affector = "0.2"
-tokio = { version = "1", features = ["full"] }
+llm_affector = "0.3"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 
-Set an OpenAI API key in the environment or in a `.env` file (loaded automatically):
-
-```bash
-export LLM_API_KEY=sk-...
-```
-
-```rust
+```rust,no_run
 use llm_affector::{critique_code, detect_hallucination, Verdict};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), llm_affector::LlmAffectorError> {
+    // Reads LLM_API_KEY, LLM_BASE_URL and LLM_MODEL from the environment or a .env file.
     let answer = "Scientists have proven that coffee beans grow on the moon.";
     let code = "fn divide(a: i32, b: i32) -> i32 { a / b }";
 
@@ -87,27 +61,95 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
-
-    let report = report?;
-    println!("risks: {:?}", report.risks);
-    println!("missing tests: {:?}", report.missing_tests);
+    println!("risks: {:?}", report?.risks);
     Ok(())
 }
 ```
 
-Try it from a clone:
+To configure the client in code, or reuse one client for many calls, use the builder:
 
-```bash
-git clone https://gitlab.com/mattbusel/llm_affector
-cd llm_affector
-cp .env.example .env   # then put your key in LLM_API_KEY
-cargo run -- check "some claim"    # the CLI (src/main.rs)
-cargo run --example basic_usage    # library examples
+```rust,no_run
+# async fn demo() -> Result<(), llm_affector::LlmAffectorError> {
+use std::time::Duration;
+use llm_affector::LlmClient;
+
+let judge = LlmClient::builder()
+    .base_url("https://openrouter.ai/api/v1")
+    .api_key(std::env::var("OPENROUTER_API_KEY").unwrap_or_default())
+    .model("openai/gpt-4o-mini")
+    .timeout(Duration::from_secs(60))
+    .max_retries(3)
+    .build()?;
+let verdict = judge.detect_hallucination("Rust 1.0 shipped in 2015.").await?;
+println!("{verdict:?}");
+# Ok(()) }
 ```
+
+## Why this crate
+
+| You want | llm_affector | Alternatives |
+|---|---|---|
+| An LLM-as-judge check from Rust or a shell | One async call or one CLI command, typed result, exit codes | [DeepEval](https://github.com/confident-ai/deepeval) and [RAGAS](https://github.com/explodinggradients/ragas) (Python) have many more metrics and test-suite integration; [mira-eval](https://crates.io/crates/mira-eval) is a Rust evaluation framework for agents |
+| To check a RAG answer against its documents | `check_against_sources` / `--source` | RAGAS "faithfulness", DeepEval "hallucination" metric |
+| To use the model client you already have | Implement the one-method `Judge` trait (async-openai, genai, rig, a local model, a test double) | |
+| Robust parsing of judge replies | The first JSON object of the right shape anywhere in the reply; optional `json-repair` for broken JSON; optional `json_mode` | |
+
+It is a thin, honest tool: the judge is an LLM and can be wrong both ways, and without sources it only has its own knowledge.
+
+## Bring your own client
+
+```rust
+use llm_affector::judge::{detect_hallucination_with, Judge};
+use llm_affector::{LlmAffectorError, Verdict};
+
+struct MyJudge; // wrap async-openai, genai, rig, a local model...
+
+impl Judge for MyJudge {
+    async fn complete(&self, prompt: &str) -> Result<String, LlmAffectorError> {
+        // send `prompt`, return the reply text
+        # let _ = prompt;
+        Ok(r#"{"verdict": "PASS", "issues": []}"#.to_string())
+    }
+}
+
+# #[tokio::main(flavor = "current_thread")]
+# async fn main() -> Result<(), LlmAffectorError> {
+let verdict = detect_hallucination_with(&MyJudge, "Rust 1.0 shipped in 2015.").await?;
+assert_eq!(verdict, Verdict::Pass);
+# Ok(())
+# }
+```
+
+## Providers
+
+Anything with an OpenAI-compatible `/chat/completions` endpoint works. Set `LLM_BASE_URL` (or `.base_url(...)`) to:
+
+| Provider | Base URL | Key |
+|---|---|---|
+| OpenAI (default) | `https://api.openai.com/v1` | required |
+| Ollama (local) | `http://localhost:11434/v1` | none |
+| OpenRouter | `https://openrouter.ai/api/v1` | required |
+| Google Gemini | `https://generativelanguage.googleapis.com/v1beta/openai` | required |
+| vLLM / LM Studio | `http://localhost:8000/v1` / `http://localhost:1234/v1` | usually none |
+
+## Configuration
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `LLM_API_KEY` | none | API key, sent as a Bearer token. Required only for the default OpenAI endpoint. |
+| `LLM_BASE_URL` | `https://api.openai.com/v1` | The part before `/chat/completions`. |
+| `LLM_MODEL` | `gpt-4o-mini` | Judge model. |
+| `LLM_TIMEOUT_SECONDS` | `30` | Timeout per attempt. |
+| `LLM_MAX_RETRIES` | `2` | Retries after the first attempt. |
+| `LLM_JSON_MODE` | off | `1` sends `"response_format": {"type": "json_object"}` (OpenAI, Ollama, vLLM, Gemini's OpenAI endpoint, most OpenRouter models). |
+
+A `.env` file in the current directory is read too (see `.env.example`).
+
+Requests that fail with HTTP 408, 429 or 5xx, time out, or cannot connect are retried with exponential backoff and jitter. When the server sends `Retry-After` (seconds or a date), that wait is used instead, up to 60 seconds. Other errors (a rejected key, an unknown model) fail straight away.
 
 ## Handling errors
 
-```rust
+```rust,no_run
 use llm_affector::{detect_hallucination, LlmAffectorError};
 
 async fn check(text: &str) {
@@ -115,29 +157,44 @@ async fn check(text: &str) {
         Ok(verdict) => println!("{verdict:?}"),
         Err(LlmAffectorError::ApiKeyNotFound) => eprintln!("set LLM_API_KEY"),
         Err(LlmAffectorError::ApiError { status, body }) => eprintln!("API returned {status}: {body}"),
-        Err(LlmAffectorError::InvalidResponse(msg)) => eprintln!("model did not return valid JSON: {msg}"),
+        Err(LlmAffectorError::InvalidResponse(msg)) => eprintln!("the judge did not return the JSON asked for: {msg}"),
         Err(e) => eprintln!("{e}"),
     }
 }
 ```
 
+## Cargo features
+
+| Feature | Default | What it adds |
+|---|---|---|
+| `json-repair` | off | If no valid JSON object is found, repair the reply with [llm_json](https://crates.io/crates/llm_json) (trailing commas, single quotes, unquoted keys). Off by default because llm_json depends on clap. |
+
+## Examples
+
+| Example | Needs | What it shows |
+|---|---|---|
+| `custom_judge` | nothing | Your own `Judge`, with a fixed reply |
+| `grounded_check` | Ollama (or `LLM_BASE_URL`) | Checking a RAG answer against its passages |
+| `basic_usage` | `LLM_API_KEY` | Both checks and the critique |
+
 ## How it works
+
+The judge model is asked for JSON. Its reply is searched for the first JSON object of the right shape, so a sentence before it, a code fence in any case (```` ```json ````, ```` ```JSON ````) or a note after it do not break parsing. On ten reply shapes collected in `tests/reply_corpus.rs`, 0.2.1's parser understood 6 and this release understands all 10.
 
 | File | What it holds |
 |---|---|
-| `src/hallucination.rs` | fact-checker prompt, JSON parsing into `Verdict` |
-| `src/critique.rs` | Rust reviewer prompt, JSON parsing into `CritiqueReport` |
-| `src/client.rs` | `LlmClient`: reqwest call to an OpenAI-compatible Chat Completions endpoint (default `gpt-4o-mini`, temperature 0.1, 30 s timeout; all configurable) |
-| `src/types.rs` | `Verdict`, `Issue`, `CritiqueReport` and the OpenAI wire types |
-| `src/errors.rs` | `LlmAffectorError` |
+| `src/hallucination.rs` | fact-checker prompt, parsing into `Verdict` |
+| `src/critique.rs` | Rust reviewer prompt, parsing into `CritiqueReport` |
+| `src/client.rs` | `LlmClient`: the HTTP call, builder, retries |
+| `src/json.rs` | finds the JSON object in a reply |
+| `src/judge.rs` | the `Judge` trait and the `*_with` functions |
 | `src/main.rs` | the `llm_affector` command-line tool |
-| `examples/basic_usage.rs` | runnable library demo |
 
-## Status and limitations
+## Limitations
 
-Early prototype (0.2.0).
+- The hallucination check relies only on the judge model's own knowledge; there is no retrieval or source grounding. Treat a `Pass` as "the judge found nothing", not as verified.
+- The judge is itself an LLM and can be wrong in both directions.
 
-- Speaks the OpenAI Chat Completions format only. Configure it with `LLM_API_KEY` (required), `LLM_BASE_URL`, `LLM_MODEL` (default `gpt-4o-mini`) and `LLM_TIMEOUT_SECONDS` (default 30), from the environment or a `.env` file.
-- Each call creates a new HTTP client.
-- The hallucination check relies only on the judge model's own knowledge; there is no retrieval or source grounding, so treat a `Pass` as "the judge found nothing", not as verified.
-- `tests/` and the `concurrent_analysis` / `error_handling` examples are placeholders with no content yet.
+## License
+
+MIT

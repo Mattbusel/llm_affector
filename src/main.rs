@@ -4,7 +4,7 @@
 use std::io::Read;
 use std::process::ExitCode;
 
-use llm_affector::{critique_code, detect_hallucination, Verdict};
+use llm_affector::{check_against_sources, critique_code, detect_hallucination, Verdict};
 
 const HELP: &str = "\
 llm_affector: ask a second LLM to audit text or code
@@ -13,6 +13,8 @@ Usage:
   llm_affector check <TEXT>           check a claim or answer for hallucinations
   llm_affector check --file <PATH>    check the contents of a file
   llm_affector check -                read the text from stdin
+  llm_affector check --source DOC.txt <TEXT>
+                                      check only against these documents (repeatable)
   llm_affector critique <PATH>        review a Rust source file
   llm_affector critique -             review code read from stdin
   llm_affector --help | --version
@@ -23,13 +25,16 @@ Options:
 Exit codes: 0 = pass / critique printed, 1 = hallucinations found, 2 = error.
 
 Environment (a .env file in the current folder is read too):
-  LLM_API_KEY          API key (required)
+  LLM_API_KEY          API key (required for the default OpenAI endpoint)
   LLM_BASE_URL         OpenAI-compatible endpoint (default https://api.openai.com/v1)
   LLM_MODEL            model name (default gpt-4o-mini)
-  LLM_TIMEOUT_SECONDS  request timeout (default 30)
+  LLM_TIMEOUT_SECONDS  timeout per attempt (default 30)
+  LLM_MAX_RETRIES      retries on 429, 5xx and timeouts (default 2)
+  LLM_JSON_MODE        1 to ask the server for a JSON reply (response_format)
 
-Example:
+Examples:
   llm_affector check \"The Eiffel Tower was finished in 1999.\"
+  LLM_BASE_URL=http://localhost:11434/v1 LLM_MODEL=qwen2.5:7b llm_affector check \"...\"
 ";
 
 fn read_input(args: &[String], file_flag: bool) -> Result<String, String> {
@@ -75,12 +80,36 @@ async fn main() -> ExitCode {
 
     match cmd {
         "check" => {
+            // --source PATH (repeatable): check against these documents.
+            let mut sources = Vec::new();
+            let mut others: Vec<String> = Vec::new();
+            let mut it = rest.iter();
+            while let Some(a) = it.next() {
+                if a == "--source" || a == "-s" {
+                    let Some(path) = it.next() else {
+                        return fail("--source needs a path");
+                    };
+                    match std::fs::read_to_string(path) {
+                        Ok(t) => sources.push(t),
+                        Err(e) => return fail(&format!("cannot read {path}: {e}")),
+                    }
+                } else {
+                    others.push(a.clone());
+                }
+            }
+            let rest = &others[..];
             let text = match read_input(rest, false) {
                 Ok(t) if !t.trim().is_empty() => t,
                 Ok(_) => return fail("input is empty"),
                 Err(e) => return fail(&e),
             };
-            match detect_hallucination(&text).await {
+            let result = if sources.is_empty() {
+                detect_hallucination(&text).await
+            } else {
+                let refs: Vec<&str> = sources.iter().map(String::as_str).collect();
+                check_against_sources(&text, &refs).await
+            };
+            match result {
                 Ok(verdict) => {
                     let failed = matches!(verdict, Verdict::Fail(_));
                     if json {

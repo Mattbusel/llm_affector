@@ -1,37 +1,52 @@
 [package]
 name = "llm_affector"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
+rust-version = "1.88"
 authors = ["Matthew Busel"]
-description = "Async Rust library and CLI that uses a second LLM call to flag hallucinations and critique code"
+description = "Ask a second LLM to audit the first: flag hallucinated or unsupported claims (optionally against your sources) and critique Rust code, as a library or a CLI"
 license = "MIT"
 readme = "README.md"
 homepage = "https://gitlab.com/mattbusel/llm_affector"
 repository = "https://gitlab.com/mattbusel/llm_affector"
 documentation = "https://docs.rs/llm_affector"
-keywords = ["llm", "async", "tokio", "openai", "analysis"]
+keywords = ["llm", "hallucination", "openai", "ollama", "llm-as-judge"]
 categories = ["api-bindings", "text-processing", "command-line-utilities"]
+include = ["src/**/*", "examples/**/*", "tests/**/*", "README.md", "CHANGELOG.md", "LICENSE", "Cargo.toml"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[features]
+# Repair broken JSON in judge replies (trailing commas, single quotes) with llm_json.
+# Off by default: llm_json depends on clap.
+json-repair = ["dep:llm_json"]
 
 [dependencies]
-tokio = { version = "1.0", features = ["full"] }
-reqwest = { version = "0.11", features = ["json"] }
+# HTTP client; rustls only, so no OpenSSL is needed anywhere.
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "http2", "charset"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-thiserror = "1.0"
-anyhow = "1.0"
-dotenv = "0.15"
+thiserror = "2"
+# .env loading (maintained fork of the unmaintained dotenv crate, RUSTSEC-2021-0141).
+dotenvy = "0.15"
+# Retries with exponential backoff and jitter.
+backon = { version = "1.5", default-features = false, features = ["std", "tokio-sleep"] }
+# Parses the HTTP-date form of Retry-After.
+httpdate = "1"
+llm_json = { version = "1", optional = true }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
 
 [dev-dependencies]
-tokio-test = "0.4"
+wiremock = "0.6"
 
 [[example]]
 name = "basic_usage"
 path = "examples/basic_usage.rs"
 
 [[example]]
-name = "concurrent_analysis"
-path = "examples/concurrent_analysis.rs"
+name = "custom_judge"
 
 [[example]]
-name = "error_handling"
-path = "examples/error_handling.rs"
+name = "grounded_check"

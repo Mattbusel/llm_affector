@@ -16,9 +16,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("   Analyzing truthful text...");
     match detect_hallucination(truthful_text).await? {
-        Verdict::Pass => println!("   ✅ No issues detected"),
+        Verdict::Pass => println!("   No issues detected"),
         Verdict::Fail(issues) => {
-            println!("   ❌ Issues found:");
+            println!("   Issues found:");
             for issue in issues {
                 println!("      - {}", issue.claim);
             }
@@ -27,9 +27,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("   Analyzing suspicious text...");
     match detect_hallucination(suspicious_text).await? {
-        Verdict::Pass => println!("   ✅ No issues detected"),
+        Verdict::Pass => println!("   No issues detected"),
         Verdict::Fail(issues) => {
-            println!("   ❌ Issues found:");
+            println!("   Issues found:");
             for issue in issues {
                 println!("      - {}: {}", issue.claim, issue.explanation);
             }
@@ -58,7 +58,7 @@ fn unsafe_divide(a: i32, b: i32) -> i32 {
     println!("   Analyzing good code...");
     let good_report = critique_code(good_code).await?;
     println!(
-        "   📝 Results: {} risks, {} improvements, {} missing tests",
+        "   Results: {} risks, {} improvements, {} missing tests",
         good_report.risks.len(),
         good_report.improvements.len(),
         good_report.missing_tests.len()
@@ -66,7 +66,7 @@ fn unsafe_divide(a: i32, b: i32) -> i32 {
 
     println!("   Analyzing risky code...");
     let risky_report = critique_code(risky_code).await?;
-    println!("   📝 Results:");
+    println!("   Results:");
     if !risky_report.risks.is_empty() {
         println!("      Risks:");
         for risk in &risky_report.risks {
@@ -80,6 +80,6 @@ fn unsafe_divide(a: i32, b: i32) -> i32 {
         }
     }
 
-    println!("\n✅ Basic usage example completed!");
+    println!("\nBasic usage example completed!");
     Ok(())
 }
