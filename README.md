@@ -1,5 +1,13 @@
 # llm_affector
 
+<!-- outcome-block -->
+**Catch false claims and risky code before they ship: a second LLM audits the first and returns a pass or fail you can gate CI on.**
+
+**Why this over the alternatives:** It exits 1 when it finds problem claims, checks answers against your own source documents, and works with OpenAI or a local Ollama.
+
+**Guarantee:** if it doesn't do what this README says, [open an issue](https://github.com/Mattbusel/llm_affector/issues) and I'll fix it.
+<!-- outcome-block -->
+
 Ask a second LLM to audit the first: a Rust library and command-line tool for anyone who wants an automatic "LLM as judge" check on generated text or code.
 
 `detect_hallucination` flags unsupported or false claims in a piece of text, `check_against_sources` flags claims your documents do not support (for retrieval-augmented answers), and `critique_code` reviews a Rust snippet for risks, improvements and missing tests. Both return typed results (`Verdict::Pass` / `Verdict::Fail(issues)`, or a `CritiqueReport`) instead of free text. It works with OpenAI and with any server that speaks the OpenAI Chat Completions format: a local Ollama, OpenRouter, Gemini, vLLM, LM Studio or a company proxy.
