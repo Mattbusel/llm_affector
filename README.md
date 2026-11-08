@@ -1,16 +1,20 @@
 # llm_affector
 
 <!-- outcome-block -->
-**Catch false claims and risky code before they ship: a second LLM audits the first and returns a pass or fail you can gate CI on.**
+**Catches false claims and risky code before they ship. A second LLM checks the first and returns pass or fail. Gate CI on it.**
 
-**Why this over the alternatives:** It exits 1 when it finds problem claims, checks answers against your own source documents, and works with OpenAI or a local Ollama.
+Exits 1 when it finds problem claims. Checks answers against your own documents. Works with OpenAI or a local Ollama.
 
-**Guarantee:** if it doesn't do what this README says, [open an issue](https://github.com/Mattbusel/llm_affector/issues) and I'll fix it.
+If it doesn't do what this README says, [open an issue](https://github.com/Mattbusel/llm_affector/issues) and I'll fix it.
 <!-- outcome-block -->
 
-Ask a second LLM to audit the first: a Rust library and command-line tool for anyone who wants an automatic "LLM as judge" check on generated text or code.
+A Rust library and CLI for "LLM as judge" checks on generated text or code.
 
-`detect_hallucination` flags unsupported or false claims in a piece of text, `check_against_sources` flags claims your documents do not support (for retrieval-augmented answers), and `critique_code` reviews a Rust snippet for risks, improvements and missing tests. Both return typed results (`Verdict::Pass` / `Verdict::Fail(issues)`, or a `CritiqueReport`) instead of free text. It works with OpenAI and with any server that speaks the OpenAI Chat Completions format: a local Ollama, OpenRouter, Gemini, vLLM, LM Studio or a company proxy.
+- `detect_hallucination` flags false or unsupported claims in text.
+- `check_against_sources` flags claims your documents don't support (for RAG answers).
+- `critique_code` reviews a Rust snippet for risks, fixes and missing tests.
+
+Results are typed (`Verdict::Pass` / `Verdict::Fail(issues)`, or a `CritiqueReport`), not free text. Works with OpenAI and any server that speaks the OpenAI Chat Completions format: local Ollama, OpenRouter, Gemini, vLLM, LM Studio or a company proxy.
 
 ## Install
 
@@ -28,7 +32,7 @@ llm_affector critique src/main.rs
 llm_affector check --json - < answer.txt
 ```
 
-`check` exits with 1 when it finds problem claims and 2 on errors, so it can gate a script or a CI job. Add `--json` for machine-readable output, and `--source FILE` (repeatable) to check the text only against those documents:
+`check` exits 1 when it finds problem claims and 2 on errors, so it can gate a script or CI job. `--json` gives machine-readable output. `--source FILE` (repeatable) checks the text only against those documents:
 
 ```bash
 llm_affector check --source docs/eiffel.txt "The Eiffel Tower opened in 1999."
@@ -74,7 +78,7 @@ async fn main() -> Result<(), llm_affector::LlmAffectorError> {
 }
 ```
 
-To configure the client in code, or reuse one client for many calls, use the builder:
+To set up the client in code, or reuse one client for many calls, use the builder:
 
 ```rust,no_run
 # async fn demo() -> Result<(), llm_affector::LlmAffectorError> {
@@ -100,9 +104,9 @@ println!("{verdict:?}");
 | An LLM-as-judge check from Rust or a shell | One async call or one CLI command, typed result, exit codes | [DeepEval](https://github.com/confident-ai/deepeval) and [RAGAS](https://github.com/explodinggradients/ragas) (Python) have many more metrics and test-suite integration; [mira-eval](https://crates.io/crates/mira-eval) is a Rust evaluation framework for agents |
 | To check a RAG answer against its documents | `check_against_sources` / `--source` | RAGAS "faithfulness", DeepEval "hallucination" metric |
 | To use the model client you already have | Implement the one-method `Judge` trait (async-openai, genai, rig, a local model, a test double) | |
-| Robust parsing of judge replies | The first JSON object of the right shape anywhere in the reply; optional `json-repair` for broken JSON; optional `json_mode` | |
+| Parsing judge replies that don't break | The first JSON object of the right shape anywhere in the reply; optional `json-repair` for broken JSON; optional `json_mode` | |
 
-It is a thin, honest tool: the judge is an LLM and can be wrong both ways, and without sources it only has its own knowledge.
+It is a thin tool. The judge is an LLM and can be wrong both ways. Without sources it only has its own knowledge.
 
 ## Bring your own client
 
@@ -151,9 +155,9 @@ Anything with an OpenAI-compatible `/chat/completions` endpoint works. Set `LLM_
 | `LLM_MAX_RETRIES` | `2` | Retries after the first attempt. |
 | `LLM_JSON_MODE` | off | `1` sends `"response_format": {"type": "json_object"}` (OpenAI, Ollama, vLLM, Gemini's OpenAI endpoint, most OpenRouter models). |
 
-A `.env` file in the current directory is read too (see `.env.example`).
+It also reads a `.env` file in the current directory (see `.env.example`).
 
-Requests that fail with HTTP 408, 429 or 5xx, time out, or cannot connect are retried with exponential backoff and jitter. When the server sends `Retry-After` (seconds or a date), that wait is used instead, up to 60 seconds. Other errors (a rejected key, an unknown model) fail straight away.
+Requests that fail with HTTP 408, 429 or 5xx, time out, or can't connect are retried with exponential backoff and jitter. If the server sends `Retry-After` (seconds or a date), it waits that long instead, up to 60 seconds. Other errors (bad key, unknown model) fail right away.
 
 ## Handling errors
 
@@ -175,7 +179,7 @@ async fn check(text: &str) {
 
 | Feature | Default | What it adds |
 |---|---|---|
-| `json-repair` | off | If no valid JSON object is found, repair the reply with [llm_json](https://crates.io/crates/llm_json) (trailing commas, single quotes, unquoted keys). Off by default because llm_json depends on clap. |
+| `json-repair` | off | If no valid JSON object is found, fixes the reply with [llm_json](https://crates.io/crates/llm_json) (trailing commas, single quotes, unquoted keys). Off by default because llm_json pulls in clap. |
 
 ## Examples
 
@@ -187,7 +191,7 @@ async fn check(text: &str) {
 
 ## How it works
 
-The judge model is asked for JSON. Its reply is searched for the first JSON object of the right shape, so a sentence before it, a code fence in any case (```` ```json ````, ```` ```JSON ````) or a note after it do not break parsing. On ten reply shapes collected in `tests/reply_corpus.rs`, 0.2.1's parser understood 6 and this release understands all 10.
+The judge is asked for JSON. The reply is searched for the first JSON object of the right shape. A sentence before it, a code fence in any case (```` ```json ````, ```` ```JSON ````) or a note after it won't break parsing. On ten reply shapes in `tests/reply_corpus.rs`, the 0.2.1 parser read 6. This release reads all 10.
 
 | File | What it holds |
 |---|---|
@@ -200,7 +204,7 @@ The judge model is asked for JSON. Its reply is searched for the first JSON obje
 
 ## Limitations
 
-- The hallucination check relies only on the judge model's own knowledge; there is no retrieval or source grounding. Treat a `Pass` as "the judge found nothing", not as verified.
+- The hallucination check uses only the judge model's own knowledge. There is no retrieval. A `Pass` means "the judge found nothing", not "verified".
 - The judge is itself an LLM and can be wrong in both directions.
 
 ## License
