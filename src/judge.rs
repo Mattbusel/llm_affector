@@ -36,11 +36,17 @@ use crate::types::{CritiqueReport, Verdict};
 /// Anything that can answer a prompt with text.
 pub trait Judge {
     /// Send `prompt` as a user message and return the reply text.
-    fn complete(&self, prompt: &str) -> impl Future<Output = Result<String, LlmAffectorError>> + Send;
+    fn complete(
+        &self,
+        prompt: &str,
+    ) -> impl Future<Output = Result<String, LlmAffectorError>> + Send;
 }
 
 impl Judge for crate::LlmClient {
-    fn complete(&self, prompt: &str) -> impl Future<Output = Result<String, LlmAffectorError>> + Send {
+    fn complete(
+        &self,
+        prompt: &str,
+    ) -> impl Future<Output = Result<String, LlmAffectorError>> + Send {
         self.send_prompt(prompt)
     }
 }

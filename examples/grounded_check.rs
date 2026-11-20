@@ -12,7 +12,10 @@ use llm_affector::{LlmClient, Verdict};
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let base = std::env::var("LLM_BASE_URL").unwrap_or_else(|_| "http://localhost:11434/v1".into());
     let model = std::env::var("LLM_MODEL").unwrap_or_else(|_| "qwen2.5:7b".into());
-    let mut builder = LlmClient::builder().base_url(base).model(model).json_mode(true);
+    let mut builder = LlmClient::builder()
+        .base_url(base)
+        .model(model)
+        .json_mode(true);
     if let Ok(key) = std::env::var("LLM_API_KEY") {
         builder = builder.api_key(key);
     }

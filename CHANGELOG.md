@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.2 (2026-11-20)
+
+- README opens with the side this crate takes: a model that grades its own answer passes its own mistakes. Why it exists, why it beats the usual approach, why adopt it today, who it is for and the tradeoffs made on purpose.
+- crates.io description and keywords say the same thing.
+
 ## 0.3.0 (2026-10-04)
 
 - **rustls instead of OpenSSL.** reqwest 0.11 with default features pulled in native-tls (OpenSSL on Linux); now reqwest 0.12 with rustls only.

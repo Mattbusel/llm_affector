@@ -19,7 +19,10 @@ pub async fn detect_hallucination(input: &str) -> Result<Verdict, LlmAffectorErr
 /// (see [`LlmClient::new`]): every claim the sources do not support is an
 /// issue, even if it happens to be true. Use this for retrieval-augmented
 /// answers, where the question is "did the answer stick to the documents".
-pub async fn check_against_sources(text: &str, sources: &[&str]) -> Result<Verdict, LlmAffectorError> {
+pub async fn check_against_sources(
+    text: &str,
+    sources: &[&str],
+) -> Result<Verdict, LlmAffectorError> {
     LlmClient::new()?.check_against_sources(text, sources).await
 }
 
@@ -67,7 +70,10 @@ mod tests {
 
     #[test]
     fn verdicts() {
-        assert_eq!(parse_verdict(r#"{"verdict":"pass"}"#).unwrap(), Verdict::Pass);
+        assert_eq!(
+            parse_verdict(r#"{"verdict":"pass"}"#).unwrap(),
+            Verdict::Pass
+        );
         let v = parse_verdict(
             r#"```json
 {"verdict":"FAIL","issues":[{"claim":"c","explanation":"e"}]}

@@ -217,7 +217,10 @@ impl LlmClient {
             b = b.timeout(Duration::from_secs(secs));
         }
         if let Some(j) = env_nonempty("LLM_JSON_MODE") {
-            b = b.json_mode(matches!(j.to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"));
+            b = b.json_mode(matches!(
+                j.to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            ));
         }
         if let Some(r) = env_nonempty("LLM_MAX_RETRIES") {
             let n = r.parse::<usize>().map_err(|_| {
@@ -365,7 +368,11 @@ mod tests {
             .unwrap();
         assert_eq!(local.base_url(), "http://localhost:11434/v1");
         assert!(LlmClient::builder().api_key("  ").build().is_err());
-        assert!(LlmClient::builder().api_key("k").model(" ").build().is_err());
+        assert!(LlmClient::builder()
+            .api_key("k")
+            .model(" ")
+            .build()
+            .is_err());
     }
 
     #[test]

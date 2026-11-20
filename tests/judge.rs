@@ -90,7 +90,10 @@ async fn no_key_means_no_authorization_header() {
         .expect(1)
         .mount(&server)
         .await;
-    let v = client(&server, 0).detect_hallucination("Water is wet.").await.unwrap();
+    let v = client(&server, 0)
+        .detect_hallucination("Water is wet.")
+        .await
+        .unwrap();
     assert_eq!(v, Verdict::Pass);
 }
 
@@ -134,8 +137,14 @@ async fn server_errors_stop_after_max_retries() {
         .expect(3)
         .mount(&server)
         .await;
-    let e = client(&server, 2).detect_hallucination("x").await.unwrap_err();
-    assert!(matches!(e, LlmAffectorError::ApiError { status: 503, .. }), "{e}");
+    let e = client(&server, 2)
+        .detect_hallucination("x")
+        .await
+        .unwrap_err();
+    assert!(
+        matches!(e, LlmAffectorError::ApiError { status: 503, .. }),
+        "{e}"
+    );
 }
 
 #[tokio::test]
@@ -147,7 +156,10 @@ async fn auth_errors_are_not_retried() {
         .expect(1)
         .mount(&server)
         .await;
-    let e = client(&server, 3).critique_code("fn a() {}").await.unwrap_err();
+    let e = client(&server, 3)
+        .critique_code("fn a() {}")
+        .await
+        .unwrap_err();
     match e {
         LlmAffectorError::ApiError { status, body } => {
             assert_eq!(status, 401);
@@ -167,7 +179,10 @@ async fn null_content_is_an_invalid_response_not_a_json_error() {
         })))
         .mount(&server)
         .await;
-    let e = client(&server, 0).detect_hallucination("x").await.unwrap_err();
+    let e = client(&server, 0)
+        .detect_hallucination("x")
+        .await
+        .unwrap_err();
     assert!(matches!(e, LlmAffectorError::InvalidResponse(_)), "{e}");
 }
 
@@ -217,7 +232,10 @@ async fn json_mode_is_off_by_default() {
         .expect(1)
         .mount(&server)
         .await;
-    assert_eq!(client(&server, 0).detect_hallucination("x").await.unwrap(), Verdict::Pass);
+    assert_eq!(
+        client(&server, 0).detect_hallucination("x").await.unwrap(),
+        Verdict::Pass
+    );
 }
 
 #[tokio::test]

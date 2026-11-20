@@ -80,7 +80,10 @@ async fn this_release_understands_every_reply_shape() {
         new += usize::from(ok_new);
         assert!(ok_new, "0.3.0 failed on reply {}", i + 1);
     }
-    println!("0.2.1 parsed {old}/{n}, 0.3.0 parsed {new}/{n}", n = CORPUS.len());
+    println!(
+        "0.2.1 parsed {old}/{n}, 0.3.0 parsed {new}/{n}",
+        n = CORPUS.len()
+    );
     assert_eq!(new, CORPUS.len());
     assert_eq!(old, 6, "0.2.1 parses replies 1, 2, 4, 7, 8 and 9 only");
 }

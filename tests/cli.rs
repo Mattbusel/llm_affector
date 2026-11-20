@@ -38,7 +38,12 @@ async fn check_with_sources_exits_1_on_fail_and_prints_json() {
     let doc = std::env::temp_dir().join("llm_affector_cli_source.txt");
     std::fs::write(&doc, "opened in 1889").unwrap();
     let doc = doc.to_string_lossy().into_owned();
-    let (code, out) = run(&server, &["check", "--json", "--source", &doc, "It", "opened", "in", "1999."]);
+    let (code, out) = run(
+        &server,
+        &[
+            "check", "--json", "--source", &doc, "It", "opened", "in", "1999.",
+        ],
+    );
     assert_eq!(code, 1, "{out}");
     let v: serde_json::Value = serde_json::from_str(out.trim()).unwrap();
     assert_eq!(v["verdict"], "FAIL");

@@ -23,10 +23,14 @@ async fn main() -> Result<(), LlmAffectorError> {
     );
     let answer = "The Eiffel Tower opened in 1999.";
     for (label, verdict) in [
-        ("own knowledge", detect_hallucination_with(&judge, answer).await?),
+        (
+            "own knowledge",
+            detect_hallucination_with(&judge, answer).await?,
+        ),
         (
             "against sources",
-            check_against_sources_with(&judge, answer, &["The tower opened on 31 March 1889."]).await?,
+            check_against_sources_with(&judge, answer, &["The tower opened on 31 March 1889."])
+                .await?,
         ),
     ] {
         match verdict {

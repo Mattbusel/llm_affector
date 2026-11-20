@@ -1,16 +1,15 @@
 [package]
 name = "llm_affector"
-version = "0.3.0"
+version = "0.3.2"
 edition = "2021"
 rust-version = "1.88"
 authors = ["Matthew Busel"]
-description = "Ask a second LLM to audit the first: flag hallucinated or unsupported claims (optionally against your sources) and critique Rust code, as a library or a CLI"
+description = "A model that grades its own answer passes its own mistakes. A second LLM call audits the first: flags hallucinated or unsupported claims (optionally against your sources) and critiques Rust code; CLI exits 1 to gate CI."
 license = "MIT"
 readme = "README.md"
-homepage = "https://gitlab.com/mattbusel/llm_affector"
-repository = "https://gitlab.com/mattbusel/llm_affector"
+repository = "https://github.com/Mattbusel/llm_affector"
 documentation = "https://docs.rs/llm_affector"
-keywords = ["llm", "hallucination", "openai", "ollama", "llm-as-judge"]
+keywords = ["llm", "hallucination", "llm-as-judge", "openai", "ollama"]
 categories = ["api-bindings", "text-processing", "command-line-utilities"]
 include = ["src/**/*", "examples/**/*", "tests/**/*", "README.md", "CHANGELOG.md", "LICENSE", "Cargo.toml"]
 
